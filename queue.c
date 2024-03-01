@@ -116,8 +116,12 @@ bool q_delete_dup(struct list_head *head)
 /* Swap every two adjacent nodes */
 void q_swap(struct list_head *head)
 {
+    if (!head || !head->next)
+        return;
     struct list_head *now = head, *tail;
-    for (head->prev->next = NULL; now && now->next; now = now->next) {
+    head->prev->next = NULL;
+    head = head->next;
+    for (; now && now->next; now = now->next) {
         now->next->prev = now->prev;
         now->prev = now->next;
         now->next = now->next->next;
