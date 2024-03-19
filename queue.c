@@ -186,7 +186,7 @@ int q_ascend(struct list_head *head)
                          list_entry(head, element_t, list)->value) > 0;
          tmp = tmp->next) {
         list_del(head);
-        q_release_element(head, element_t, list);
+        q_release_element(list_entry(head, element_t, list));
         head = tmp;
     }
     tmp = head;
@@ -194,7 +194,7 @@ int q_ascend(struct list_head *head)
         if (strcmp(list_entry(tmp, element_t, list)->value,
                    list_entry(next, element_t, list)->value) > 0) {
             list_del(tmp);
-            q_release_element(tmp, element_t, list);
+            q_release_element(list_entry(tmp, element_t, list));
             tmp = next;
         } else
             ++count;
@@ -216,7 +216,7 @@ int q_descend(struct list_head *head)
                          list_entry(head, element_t, list)->value) > 0;
          tmp = tmp->prev) {
         list_del(head);
-        q_release_element(head, element_t, list);
+        q_release_element(list_entry(head, element_t, list));
         head = tmp;
     }
     tmp = head;
@@ -224,7 +224,7 @@ int q_descend(struct list_head *head)
         if (strcmp(list_entry(tmp, element_t, list)->value,
                    list_entry(prev, element_t, list)->value) > 0) {
             list_del(tmp);
-            q_release_element(tmp, element_t, list);
+            q_release_element(list_entry(tmp, element_t, list));
             tmp = prev;
         } else
             ++count;
