@@ -232,10 +232,67 @@ int q_descend(struct list_head *head)
     return count;
 }
 
+void q_merge_two(struct list_head *head,
+                 struct list_head *another,
+                 bool descend)
+{
+    if (!head && !another)
+        return;
+    struct list_head **indirect = &head, *head1 = head->next,
+                     *head2 = another->next, **node;
+    for (; head1 != head && head2 != another; *node = (*node)->next) {
+        node = ((strcmp(list_entry(head1, element_t, list)->value,
+                        list_entry(head2, element_t, list)->value) < 0) ^
+                descend)
+                   ? &head1
+                   : &head2;
+        (*node)->prev = *indirect;
+        (*indirect)->next = *node;
+        indirect = &(*indirect)->next;
+    }
+    node = head1 == head ? &another : &head;
+    if (head1 == head)
+        head1 = head2;
+    head1->prev = *indirect;
+    (*indirect)->next = head1;
+    for (; head1->next != *node;)
+        head1 = head1->next;
+    head1->next = head;
+    head->prev = head1;
+    INIT_LIST_HEAD(another);
+}
+
 /* Merge all the queues into one sorted queue, which is in ascending/descending
  * order */
 int q_merge(struct list_head *head, bool descend)
 {
-    // https://leetcode.com/problems/merge-k-sorted-lists/
-    return 0;
+    if (!head)
+        return 0;
+    for (;;) {
+        struct list_head *cur = head->next, *next;
+        for (next = cur->next;
+             next != head &&
+             q_size(list_entry(next, queue_contex_t, chain)->q) == 0;)
+            next = next->next;
+        if (next == head)
+            break;
+    LOOP:
+        q_merge_two(list_entry(cur, queue_contex_t, chain)->q,
+                    list_entry(next, queue_contex_t, chain)->q, descend);
+        list_entry(next, queue_contex_t, chain)->size = 0;
+        for (cur = next->next;
+             cur != head &&
+             q_size(list_entry(cur, queue_contex_t, chain)->q) == 0;)
+            cur = cur->next;
+        if (cur == head)
+            continue;
+        for (next = cur->next;
+             next != head &&
+             q_size(list_entry(next, queue_contex_t, chain)->q) == 0;)
+            next = next->next;
+        if (next != head)
+            goto LOOP;
+    }
+    return list_entry(head->next, queue_contex_t, chain)->size =
+               q_size(list_entry(head->next, queue_contex_t, chain)->q);
 }
