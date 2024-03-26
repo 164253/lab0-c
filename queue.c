@@ -107,14 +107,26 @@ bool q_delete_dup(struct list_head *head)
 {
     if (!head)
         return false;
-    struct list_head *pos;
-    list_for_each (pos, head->next) {
+    bool delete_this = false;
+    for (struct list_head *pos = head->next->next; pos != head;
+         pos = pos->next) {
         if (!strcmp(list_entry(pos->prev, element_t, list)->value,
                     list_entry(pos, element_t, list)->value)) {
-            pos->prev = pos->prev->prev;
-            q_release_element(list_entry(pos->prev->next, element_t, list));
-            pos->prev->next = pos;
+            delete_this = true;
+            struct list_head *tmp = pos->prev;
+            list_del(tmp);
+            q_release_element(list_entry(tmp, element_t, list));
+        } else if (delete_this) {
+            struct list_head *tmp = pos->prev;
+            list_del(tmp);
+            q_release_element(list_entry(tmp, element_t, list));
+            delete_this = false;
         }
+    }
+    if (delete_this) {
+        struct list_head *tmp = head->prev;
+        list_del(tmp);
+        q_release_element(list_entry(tmp, element_t, list));
     }
     return true;
 }
