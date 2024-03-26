@@ -122,21 +122,7 @@ bool q_delete_dup(struct list_head *head)
 /* Swap every two adjacent nodes */
 void q_swap(struct list_head *head)
 {
-    if (!head || !head->next)
-        return;
-    struct list_head *now = head, *tail;
-    head->prev->next = NULL;
-    head = head->next;
-    for (; now && now->next; now = now->next) {
-        now->next->prev = now->prev;
-        now->prev = now->next;
-        now->next = now->next->next;
-        now->prev->next = now;
-        tail = now;
-    }
-    if (now)
-        tail = now;
-    tail->next = head;
+    q_reverseK(head, 2);
 }
 
 /* Reverse elements in queue */
@@ -158,18 +144,23 @@ void q_reverseK(struct list_head *head, int k)
 {
     if (!head)
         return;
-    struct list_head *prev, *left = head, *right, *next;
+    struct list_head *prev, *left = head->next, *right, *next;
     do {
         right = left;
         for (int i = k; --i && right->next != head;)
             right = right->next;
         prev = left->prev;
         next = right->next;
-        left->prev = right;
-        right->next = left;
-        q_reverse(left);
-        right->prev = prev;
-        left->next = next;
+        struct list_head tmp_head;
+        left->prev = &tmp_head;
+        right->next = &tmp_head;
+        tmp_head.next = left;
+        tmp_head.prev = right;
+        q_reverse(&tmp_head);
+        prev->next = tmp_head.next;
+        tmp_head.next->prev = prev;
+        next->prev = tmp_head.prev;
+        tmp_head.prev->next = next;
         left = next;
     } while (left != head);
 }
