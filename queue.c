@@ -84,15 +84,19 @@ int q_size(struct list_head *head)
     return len;
 }
 
+#define q_find_mid(head, mid, midnext)                                      \
+    mid = (head)->next;                                                     \
+    midnext = (head)->prev;                                                 \
+    for (; mid != midnext && mid->next != midnext; midnext = midnext->prev) \
+        mid = mid->next;
+
 /* Delete the middle node in queue */
 bool q_delete_mid(struct list_head *head)
 {
     if (!head || list_empty(head))
         return false;
-    head = head->next;
-    for (struct list_head *tail = head->prev;
-         head != tail && head->next != tail; tail = tail->prev)
-        head = head->next;
+    struct list_head *tail;
+    q_find_mid(head, head, tail);
     list_del(head);
     q_release_element(list_entry(head, element_t, list));
     return true;
@@ -170,8 +174,55 @@ void q_reverseK(struct list_head *head, int k)
     } while (left != head);
 }
 
+void q_merge_two(struct list_head *head,
+                 struct list_head *another,
+                 bool descend)
+{
+    if (!head && !another)
+        return;
+    struct list_head **indirect = &head, *head1 = head->next,
+                     *head2 = another->next, **node;
+    for (; head1 != head && head2 != another; *node = (*node)->next) {
+        node = ((strcmp(list_entry(head1, element_t, list)->value,
+                        list_entry(head2, element_t, list)->value) < 0) ^
+                descend)
+                   ? &head1
+                   : &head2;
+        (*node)->prev = *indirect;
+        (*indirect)->next = *node;
+        indirect = &(*indirect)->next;
+    }
+    node = head1 == head ? &another : &head;
+    if (head1 == head)
+        head1 = head2;
+    head1->prev = *indirect;
+    (*indirect)->next = head1;
+    for (; head1->next != *node;)
+        head1 = head1->next;
+    head1->next = head;
+    head->prev = head1;
+    INIT_LIST_HEAD(another);
+}
+
 /* Sort elements of queue in ascending/descending order */
-void q_sort(struct list_head *head, bool descend) {}
+void q_sort(struct list_head *head, bool descend)
+{
+    if (!head || list_empty(head) || head->next->next == head)
+        return;
+    struct list_head *mid, *midnext, head2;
+    q_find_mid(head, mid, midnext);
+    if (mid == midnext)
+        midnext = midnext->next;
+    head->prev->next = &head2;
+    head2.prev = head->prev;
+    midnext->prev = &head2;
+    head2.next = midnext;
+    mid->next = head;
+    head->prev = mid;
+    q_sort(head, descend);
+    q_sort(&head2, descend);
+    q_merge_two(head, &head2, descend);
+}
 
 /* Remove every node which has a node with a strictly less value anywhere to
  * the right side of it */
@@ -230,36 +281,6 @@ int q_descend(struct list_head *head)
             ++count;
     tmp->prev = head;
     return count;
-}
-
-void q_merge_two(struct list_head *head,
-                 struct list_head *another,
-                 bool descend)
-{
-    if (!head && !another)
-        return;
-    struct list_head **indirect = &head, *head1 = head->next,
-                     *head2 = another->next, **node;
-    for (; head1 != head && head2 != another; *node = (*node)->next) {
-        node = ((strcmp(list_entry(head1, element_t, list)->value,
-                        list_entry(head2, element_t, list)->value) < 0) ^
-                descend)
-                   ? &head1
-                   : &head2;
-        (*node)->prev = *indirect;
-        (*indirect)->next = *node;
-        indirect = &(*indirect)->next;
-    }
-    node = head1 == head ? &another : &head;
-    if (head1 == head)
-        head1 = head2;
-    head1->prev = *indirect;
-    (*indirect)->next = head1;
-    for (; head1->next != *node;)
-        head1 = head1->next;
-    head1->next = head;
-    head->prev = head1;
-    INIT_LIST_HEAD(another);
 }
 
 /* Merge all the queues into one sorted queue, which is in ascending/descending
