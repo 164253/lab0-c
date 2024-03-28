@@ -59,8 +59,10 @@ element_t *q_remove_head(struct list_head *head, char *sp, size_t bufsize)
     if (!head || list_empty(head))
         return NULL;
     element_t *elem = list_first_entry(head, element_t, list);
-    if (sp)
+    if (sp) {
         strncpy(sp, elem->value, bufsize - 1);
+        sp[bufsize - 1] = 0;
+    }
     list_del(head->next);
     return elem;
 }
@@ -266,6 +268,7 @@ int q_ascend(struct list_head *head)
 int q_descend(struct list_head *head)
 {
     q_delete_somthing(head, -1);
+    return q_size(head);
 }
 
 /* Merge all the queues into one sorted queue, which is in ascending/descending
