@@ -102,33 +102,59 @@ bool q_delete_mid(struct list_head *head)
     return true;
 }
 
-/* Delete all nodes that have duplicate string */
-bool q_delete_dup(struct list_head *head)
+bool q_delete_somthing(struct list_head *head, int condition)
 {
     if (!head)
         return false;
-    bool delete_this = false;
-    for (struct list_head *pos = head->next->next; pos != head;
-         pos = pos->next) {
-        if (!strcmp(list_entry(pos->prev, element_t, list)->value,
-                    list_entry(pos, element_t, list)->value)) {
-            delete_this = true;
-            struct list_head *tmp = pos->prev;
+    bool reverse = condition & 0x80000000;
+    for (struct list_head *left = reverse ? head->prev : head->next,
+                          *right = reverse ? left->prev : left->next;
+         right != head; right = reverse ? right->prev : right->next) {
+        while (right != head) {
+            int k = strcmp(
+                list_entry(reverse ? right->next : right->prev, element_t, list)
+                    ->value,
+                list_entry(right, element_t, list)->value);
+            if ((k >> 7) - (-k >> 7) != !!condition)
+                break;
+            right = reverse ? right->prev : right->next;
+        }
+        if (!condition &&
+            !strcmp(list_entry(left, element_t, list)->value,
+                    list_entry(left->next, element_t, list)->value))
+            left = left->prev;
+        for (struct list_head *tmp = reverse ? left->prev : left->next;
+             tmp != right; tmp = reverse ? left->prev : left->next) {
             list_del(tmp);
             q_release_element(list_entry(tmp, element_t, list));
-        } else if (delete_this) {
-            struct list_head *tmp = pos->prev;
+        }
+        if (right == head)
+            break;
+        left = right;
+    }
+    if (condition && head->next->next != head) {
+        if (reverse &&
+            strcmp(list_entry(head->next, element_t, list)->value,
+                   list_entry(head->next->next, element_t, list)->value) < 0) {
+            struct list_head *tmp = head->next;
             list_del(tmp);
             q_release_element(list_entry(tmp, element_t, list));
-            delete_this = false;
+        } else if (strcmp(
+                       list_entry(head->prev, element_t, list)->value,
+                       list_entry(head->prev->prev, element_t, list)->value) >
+                   0) {
+            struct list_head *tmp = head->next;
+            list_del(tmp);
+            q_release_element(list_entry(tmp, element_t, list));
         }
     }
-    if (delete_this) {
-        struct list_head *tmp = head->prev;
-        list_del(tmp);
-        q_release_element(list_entry(tmp, element_t, list));
-    }
     return true;
+}
+
+/* Delete all nodes that have duplicate string */
+bool q_delete_dup(struct list_head *head)
+{
+    return q_delete_somthing(head, 0);
 }
 
 /* Swap every two adjacent nodes */
@@ -231,59 +257,15 @@ void q_sort(struct list_head *head, bool descend)
  * the right side of it */
 int q_ascend(struct list_head *head)
 {
-    if (!head || list_empty(head))
-        return 0;
-    int count = 1;
-    head->prev->next = NULL;
-    struct list_head *tmp = head->next;
-    for (; tmp && strcmp(list_entry(tmp, element_t, list)->value,
-                         list_entry(head, element_t, list)->value) > 0;
-         tmp = tmp->next) {
-        list_del(head);
-        q_release_element(list_entry(head, element_t, list));
-        head = tmp;
-    }
-    tmp = head;
-    for (struct list_head *next = head->next; next; next = next->next)
-        if (strcmp(list_entry(tmp, element_t, list)->value,
-                   list_entry(next, element_t, list)->value) > 0) {
-            list_del(tmp);
-            q_release_element(list_entry(tmp, element_t, list));
-            tmp = next;
-        } else
-            ++count;
-    tmp->next = head;
-    return count;
+    q_delete_somthing(head, 1);
+    return q_size(head);
 }
 
 /* Remove every node which has a node with a strictly greater value anywhere to
  * the right side of it */
 int q_descend(struct list_head *head)
 {
-    if (!head || list_empty(head))
-        return 0;
-    int count = 1;
-    head = head->prev;
-    head->next->prev = NULL;
-    struct list_head *tmp = head->prev;
-    for (; tmp && strcmp(list_entry(tmp, element_t, list)->value,
-                         list_entry(head, element_t, list)->value) > 0;
-         tmp = tmp->prev) {
-        list_del(head);
-        q_release_element(list_entry(head, element_t, list));
-        head = tmp;
-    }
-    tmp = head;
-    for (struct list_head *prev = head->prev; prev; prev = prev->prev)
-        if (strcmp(list_entry(tmp, element_t, list)->value,
-                   list_entry(prev, element_t, list)->value) > 0) {
-            list_del(tmp);
-            q_release_element(list_entry(tmp, element_t, list));
-            tmp = prev;
-        } else
-            ++count;
-    tmp->prev = head;
-    return count;
+    q_delete_somthing(head, -1);
 }
 
 /* Merge all the queues into one sorted queue, which is in ascending/descending
